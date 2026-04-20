@@ -609,3 +609,1059 @@ fn insert_into_inline(
     }
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Task 8.1 – Unit tests for all string types
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod string_tests {
+    use crate::{parse, Value};
+
+    // Helper: parse `key = <value_toml>` and extract the string value.
+    fn parse_str(value_toml: &str) -> Result<String, crate::ParseError> {
+        let input = format!("x = {}", value_toml);
+        let doc = parse(&input)?;
+        match doc {
+            Value::Table(mut map) => match map.shift_remove("x").unwrap() {
+                Value::String(s) => Ok(s),
+                other => panic!("expected String, got {:?}", other),
+            },
+            _ => panic!("expected Table"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.1 – Basic string escape sequences
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn basic_string_escape_backspace() {
+        assert_eq!(parse_str(r#""\b""#).unwrap(), "\u{0008}");
+    }
+
+    #[test]
+    fn basic_string_escape_tab() {
+        assert_eq!(parse_str(r#""\t""#).unwrap(), "\t");
+    }
+
+    #[test]
+    fn basic_string_escape_newline() {
+        assert_eq!(parse_str(r#""\n""#).unwrap(), "\n");
+    }
+
+    #[test]
+    fn basic_string_escape_formfeed() {
+        assert_eq!(parse_str(r#""\f""#).unwrap(), "\u{000C}");
+    }
+
+    #[test]
+    fn basic_string_escape_carriage_return() {
+        assert_eq!(parse_str(r#""\r""#).unwrap(), "\r");
+    }
+
+    #[test]
+    fn basic_string_escape_quote() {
+        assert_eq!(parse_str(r#""\"""#).unwrap(), "\"");
+    }
+
+    #[test]
+    fn basic_string_escape_backslash() {
+        assert_eq!(parse_str(r#""\\""#).unwrap(), "\\");
+    }
+
+    #[test]
+    fn basic_string_escape_unicode_4digit() {
+        // \u0041 = 'A'
+        assert_eq!(parse_str(r#""\u0041""#).unwrap(), "A");
+    }
+
+    #[test]
+    fn basic_string_escape_unicode_8digit() {
+        // \U0001F600 = 😀
+        assert_eq!(parse_str(r#""\U0001F600""#).unwrap(), "😀");
+    }
+
+    #[test]
+    fn basic_string_all_escapes_combined() {
+        assert_eq!(
+            parse_str(r#""\b\t\n\f\r\"\\""#).unwrap(),
+            "\u{0008}\t\n\u{000C}\r\"\\"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.2 – Unrecognized escape rejection
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn basic_string_unrecognized_escape_rejected() {
+        assert!(parse_str(r#""\a""#).is_err());
+    }
+
+    #[test]
+    fn basic_string_unrecognized_escape_x_rejected() {
+        assert!(parse_str(r#""\x41""#).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.3 – Invalid Unicode scalar value rejection
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn basic_string_invalid_unicode_surrogate_rejected() {
+        // U+D800 is a surrogate, not a valid scalar value
+        assert!(parse_str(r#""\uD800""#).is_err());
+    }
+
+    #[test]
+    fn basic_string_invalid_unicode_too_large_rejected() {
+        // U+110000 is beyond the Unicode range
+        assert!(parse_str(r#""\U00110000""#).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.4 – Control character rejection in basic strings
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn basic_string_control_char_nul_rejected() {
+        // U+0000 (NUL) embedded directly
+        let input = "x = \"\u{0000}\"";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn basic_string_control_char_0x01_rejected() {
+        let input = "x = \"\u{0001}\"";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn basic_string_control_char_del_rejected() {
+        // U+007F (DEL)
+        let input = "x = \"\u{007F}\"";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn basic_string_tab_allowed() {
+        // Tab (U+0009) is explicitly allowed unescaped
+        assert_eq!(parse_str("\"\t\"").unwrap(), "\t");
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.8 – Literal strings: raw content, no escape processing
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn literal_string_raw_content() {
+        assert_eq!(parse_str("'hello world'").unwrap(), "hello world");
+    }
+
+    #[test]
+    fn literal_string_backslash_not_escaped() {
+        // Backslash is literal in a literal string
+        assert_eq!(parse_str(r"'C:\Users\tom'").unwrap(), r"C:\Users\tom");
+    }
+
+    #[test]
+    fn literal_string_double_quote_allowed() {
+        assert_eq!(parse_str("'say \"hi\"'").unwrap(), "say \"hi\"");
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.9 – Control character rejection in literal strings
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn literal_string_control_char_rejected() {
+        // U+0001 embedded directly
+        let input = "x = '\u{0001}'";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn literal_string_del_rejected() {
+        let input = "x = '\u{007F}'";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn literal_string_tab_allowed() {
+        // Tab is allowed in literal strings
+        assert_eq!(parse_str("'\t'").unwrap(), "\t");
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.5 – Multi-line basic string: leading newline trim
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_basic_string_leading_newline_trimmed() {
+        // The newline immediately after """ is trimmed (covered by _direct test below)
+        // This test verifies the same via the helper which wraps in key=value
+        // Note: the helper adds "x = " prefix, so we pass the raw ml string
+        let input = "x = \"\"\"\nhello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_leading_newline_trimmed_direct() {
+        let input = "x = \"\"\"\nhello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_no_leading_newline_not_trimmed() {
+        // If no leading newline, content starts immediately
+        let input = "x = \"\"\"hello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_crlf_leading_newline_trimmed() {
+        // CRLF immediately after """ is also trimmed
+        let input = "x = \"\"\"\r\nhello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.6 – Multi-line basic string: line-ending backslash
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_basic_string_line_ending_backslash() {
+        // Backslash at end of line trims backslash + whitespace + newline
+        let input = "x = \"\"\"\\\n    hello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_line_ending_backslash_multiple_lines() {
+        let input = "x = \"\"\"\\\n  \n  hello\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.7 – Multi-line basic string: up to two unescaped quotes before closing
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_basic_string_one_quote_before_closing() {
+        // Content ends with one quote before the closing """
+        let input = "x = \"\"\"hello\"\"\"\"";
+        // That's: content = hello", closing = """
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello\"".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_two_quotes_before_closing() {
+        // Content ends with two quotes before the closing """
+        // TOML: x = """hello"""""  (3 opening + hello + 2 extra + 3 closing = 5 quotes at end)
+        let input = "x = \"\"\"hello\"\"\"\"\"\"";
+        // That's: x = """ hello "" """  but we need exactly 5 quotes at end
+        // Use a raw string to be unambiguous: """hello"""""
+        let input2 = r#"x = """hello""""" "#;
+        // Trim trailing space
+        let input2 = input2.trim_end();
+        let doc = parse(input2).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello\"\"".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_one_quote_inside() {
+        // One unescaped quote in the middle of a multi-line basic string
+        let input2 = "x = \"\"\"say \"hi\" there\"\"\"";
+        let doc = parse(input2).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("say \"hi\" there".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_basic_string_escape_sequences_work() {
+        let input = "x = \"\"\"\n\\t\\n\\\\\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("\t\n\\".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.10 – Multi-line literal string: leading newline trim
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_literal_string_leading_newline_trimmed() {
+        let input = "x = '''\nhello'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_no_leading_newline_not_trimmed() {
+        let input = "x = '''hello'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_crlf_leading_newline_trimmed() {
+        let input = "x = '''\r\nhello'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.10 – Multi-line literal string: no escape processing
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_literal_string_no_escape_processing() {
+        let input = "x = '''\n\\n\\t\\\\'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                // Backslashes are literal
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("\\n\\t\\\\".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.11 – Multi-line literal string: up to two unescaped single quotes before closing
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_literal_string_one_quote_before_closing() {
+        // Content ends with one single quote before the closing '''
+        let input = "x = '''hello''''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello'".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_two_quotes_before_closing() {
+        // Content ends with two single quotes before the closing '''
+        let input = "x = '''hello'''''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("hello''".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_single_quote_inside() {
+        let input = "x = '''it's a test'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("it's a test".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4.12 – Multi-line literal string: control character rejection
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn ml_literal_string_control_char_rejected() {
+        // U+0001 is not allowed (not tab, LF, or CR)
+        let input = "x = '''\n\u{0001}'''";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn ml_literal_string_del_rejected() {
+        let input = "x = '''\n\u{007F}'''";
+        assert!(parse(input).is_err());
+    }
+
+    #[test]
+    fn ml_literal_string_tab_allowed() {
+        let input = "x = '''\n\t'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("\t".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_lf_allowed() {
+        // LF is allowed inside multi-line literal strings
+        let input = "x = '''\nline1\nline2'''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("line1\nline2".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Additional edge cases
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn basic_string_empty() {
+        assert_eq!(parse_str(r#""""#).unwrap(), "");
+    }
+
+    #[test]
+    fn literal_string_empty() {
+        assert_eq!(parse_str("''").unwrap(), "");
+    }
+
+    #[test]
+    fn ml_basic_string_empty() {
+        let input = "x = \"\"\"\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn ml_literal_string_empty() {
+        let input = "x = ''''''";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn basic_string_unicode_content() {
+        // Direct Unicode content (non-ASCII) is allowed
+        assert_eq!(parse_str("\"héllo\"").unwrap(), "héllo");
+    }
+
+    #[test]
+    fn ml_basic_string_multiline_content() {
+        let input = "x = \"\"\"\nline1\nline2\n\"\"\"";
+        let doc = parse(input).unwrap();
+        match doc {
+            Value::Table(mut m) => {
+                assert_eq!(m.shift_remove("x").unwrap(), Value::String("line1\nline2\n".to_string()));
+            }
+            _ => panic!(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 8.2 – Unit tests for integer parsing
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod integer_tests {
+    use crate::{parse, Value};
+
+    /// Helper: parse `x = <integer_toml>` and return the i64 value.
+    fn parse_int(value_toml: &str) -> Result<i64, crate::ParseError> {
+        let input = format!("x = {}", value_toml);
+        let doc = parse(&input)?;
+        match doc {
+            Value::Table(mut map) => match map.shift_remove("x").unwrap() {
+                Value::Integer(n) => Ok(n),
+                other => panic!("expected Integer, got {:?}", other),
+            },
+            _ => panic!("expected Table"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.1 – Decimal integers with optional sign
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn decimal_positive() {
+        assert_eq!(parse_int("42").unwrap(), 42);
+    }
+
+    #[test]
+    fn decimal_negative() {
+        assert_eq!(parse_int("-42").unwrap(), -42);
+    }
+
+    #[test]
+    fn decimal_zero() {
+        assert_eq!(parse_int("0").unwrap(), 0);
+    }
+
+    #[test]
+    fn decimal_plus_zero() {
+        assert_eq!(parse_int("+0").unwrap(), 0);
+    }
+
+    #[test]
+    fn decimal_minus_zero() {
+        assert_eq!(parse_int("-0").unwrap(), 0);
+    }
+
+    #[test]
+    fn decimal_explicit_plus_sign() {
+        assert_eq!(parse_int("+99").unwrap(), 99);
+    }
+
+    #[test]
+    fn decimal_large_positive() {
+        assert_eq!(parse_int("1000000").unwrap(), 1_000_000);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.2 – Leading zero rejection
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn decimal_leading_zero_rejected() {
+        assert!(parse_int("01").is_err());
+    }
+
+    #[test]
+    fn decimal_leading_zero_multi_rejected() {
+        assert!(parse_int("007").is_err());
+    }
+
+    #[test]
+    fn decimal_leading_zero_negative_rejected() {
+        assert!(parse_int("-01").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.3 – Hexadecimal integers (0x prefix, case-insensitive)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn hex_lowercase() {
+        assert_eq!(parse_int("0xdeadbeef").unwrap(), 0xdeadbeef_i64);
+    }
+
+    #[test]
+    fn hex_uppercase() {
+        assert_eq!(parse_int("0xDEADBEEF").unwrap(), 0xDEADBEEF_i64);
+    }
+
+    #[test]
+    fn hex_mixed_case() {
+        assert_eq!(parse_int("0xDeAdBeEf").unwrap(), 0xDeAdBeEf_i64);
+    }
+
+    #[test]
+    fn hex_zero() {
+        assert_eq!(parse_int("0x0").unwrap(), 0);
+    }
+
+    #[test]
+    fn hex_simple() {
+        assert_eq!(parse_int("0xff").unwrap(), 255);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.4 – Octal integers (0o prefix)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn octal_simple() {
+        assert_eq!(parse_int("0o17").unwrap(), 15);
+    }
+
+    #[test]
+    fn octal_zero() {
+        assert_eq!(parse_int("0o0").unwrap(), 0);
+    }
+
+    #[test]
+    fn octal_larger() {
+        assert_eq!(parse_int("0o755").unwrap(), 0o755_i64);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.5 – Binary integers (0b prefix)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn binary_simple() {
+        assert_eq!(parse_int("0b1010").unwrap(), 10);
+    }
+
+    #[test]
+    fn binary_zero() {
+        assert_eq!(parse_int("0b0").unwrap(), 0);
+    }
+
+    #[test]
+    fn binary_all_ones() {
+        assert_eq!(parse_int("0b1111").unwrap(), 15);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.6 – + prefix rejected on non-decimal integers
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn hex_plus_prefix_rejected() {
+        assert!(parse_int("+0xff").is_err());
+    }
+
+    #[test]
+    fn octal_plus_prefix_rejected() {
+        assert!(parse_int("+0o7").is_err());
+    }
+
+    #[test]
+    fn binary_plus_prefix_rejected() {
+        assert!(parse_int("+0b1").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.7 – Leading zeros allowed in non-decimal digit portion (after prefix)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn hex_leading_zeros_in_digits_allowed() {
+        assert_eq!(parse_int("0x00ff").unwrap(), 255);
+    }
+
+    #[test]
+    fn octal_leading_zeros_in_digits_allowed() {
+        assert_eq!(parse_int("0o007").unwrap(), 7);
+    }
+
+    #[test]
+    fn binary_leading_zeros_in_digits_allowed() {
+        assert_eq!(parse_int("0b0001").unwrap(), 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.8 – Underscores as visual separators
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn decimal_underscore_separator() {
+        assert_eq!(parse_int("1_000_000").unwrap(), 1_000_000);
+    }
+
+    #[test]
+    fn decimal_underscore_single() {
+        assert_eq!(parse_int("1_0").unwrap(), 10);
+    }
+
+    #[test]
+    fn hex_underscore_separator() {
+        assert_eq!(parse_int("0xdead_beef").unwrap(), 0xdeadbeef_i64);
+    }
+
+    #[test]
+    fn octal_underscore_separator() {
+        assert_eq!(parse_int("0o7_5_5").unwrap(), 0o755_i64);
+    }
+
+    #[test]
+    fn binary_underscore_separator() {
+        assert_eq!(parse_int("0b1010_0101").unwrap(), 0b10100101_i64);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.9 – Invalid underscore placement
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn decimal_underscore_at_start_rejected() {
+        assert!(parse_int("_1000").is_err());
+    }
+
+    #[test]
+    fn decimal_underscore_at_end_rejected() {
+        assert!(parse_int("1000_").is_err());
+    }
+
+    #[test]
+    fn decimal_double_underscore_rejected() {
+        assert!(parse_int("1__000").is_err());
+    }
+
+    #[test]
+    fn hex_underscore_adjacent_to_prefix_rejected() {
+        // underscore immediately after 0x prefix
+        assert!(parse_int("0x_ff").is_err());
+    }
+
+    #[test]
+    fn hex_underscore_at_end_rejected() {
+        assert!(parse_int("0xff_").is_err());
+    }
+
+    #[test]
+    fn hex_double_underscore_rejected() {
+        assert!(parse_int("0xff__00").is_err());
+    }
+
+    #[test]
+    fn octal_underscore_adjacent_to_prefix_rejected() {
+        assert!(parse_int("0o_7").is_err());
+    }
+
+    #[test]
+    fn binary_underscore_adjacent_to_prefix_rejected() {
+        assert!(parse_int("0b_1").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 5.10 / 5.11 – i64 range: overflow and boundary values
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn i64_max_parses_successfully() {
+        // i64::MAX = 9223372036854775807
+        assert_eq!(parse_int("9223372036854775807").unwrap(), i64::MAX);
+    }
+
+    #[test]
+    fn i64_min_parses_successfully() {
+        // i64::MIN = -9223372036854775808
+        assert_eq!(parse_int("-9223372036854775808").unwrap(), i64::MIN);
+    }
+
+    #[test]
+    fn overflow_positive_rejected() {
+        // i64::MAX + 1
+        assert!(parse_int("9223372036854775808").is_err());
+    }
+
+    #[test]
+    fn overflow_negative_rejected() {
+        // i64::MIN - 1
+        assert!(parse_int("-9223372036854775809").is_err());
+    }
+
+    #[test]
+    fn overflow_very_large_rejected() {
+        assert!(parse_int("99999999999999999999").is_err());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 8.3 – Unit tests for float parsing
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod float_tests {
+    use crate::{parse, Value};
+
+    /// Helper: parse `x = <float_toml>` and extract the f64 value.
+    fn parse_float(value_toml: &str) -> Result<f64, crate::ParseError> {
+        let input = format!("x = {}", value_toml);
+        let doc = parse(&input)?;
+        match doc {
+            Value::Table(mut map) => match map.shift_remove("x").unwrap() {
+                Value::Float(f) => Ok(f),
+                other => panic!("expected Float, got {:?}", other),
+            },
+            _ => panic!("expected Table"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.1 / 6.7 – Fractional floats
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn fractional_one_point_zero() {
+        assert_eq!(parse_float("1.0").unwrap(), 1.0_f64);
+    }
+
+    #[test]
+    fn fractional_negative_one_point_five() {
+        assert_eq!(parse_float("-1.5").unwrap(), -1.5_f64);
+    }
+
+    #[test]
+    fn fractional_pi() {
+        assert_eq!(parse_float("3.14").unwrap(), 3.14_f64);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.1 / 6.7 – Exponent floats
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn exponent_lowercase_e() {
+        assert_eq!(parse_float("1e10").unwrap(), 1e10_f64);
+    }
+
+    #[test]
+    fn exponent_uppercase_e() {
+        assert_eq!(parse_float("1E10").unwrap(), 1e10_f64);
+    }
+
+    #[test]
+    fn exponent_positive_sign() {
+        assert_eq!(parse_float("1e+10").unwrap(), 1e10_f64);
+    }
+
+    #[test]
+    fn exponent_negative_sign() {
+        assert_eq!(parse_float("1e-10").unwrap(), 1e-10_f64);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.3 – Combined fractional + exponent
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn combined_fractional_and_exponent() {
+        let f = parse_float("6.626e-34").unwrap();
+        assert!((f - 6.626e-34_f64).abs() < 1e-40);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.4 – Underscores between digits
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn underscores_in_float() {
+        let f = parse_float("9_224_617.445_991_228_313").unwrap();
+        assert_eq!(f, 9_224_617.445_991_228_313_f64);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.5 – Special values: inf, +inf, -inf, nan, +nan, -nan
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn special_inf() {
+        let f = parse_float("inf").unwrap();
+        assert!(f.is_infinite() && f.is_sign_positive());
+    }
+
+    #[test]
+    fn special_plus_inf() {
+        let f = parse_float("+inf").unwrap();
+        assert!(f.is_infinite() && f.is_sign_positive());
+    }
+
+    #[test]
+    fn special_minus_inf() {
+        let f = parse_float("-inf").unwrap();
+        assert!(f.is_infinite() && f.is_sign_negative());
+    }
+
+    #[test]
+    fn special_nan() {
+        assert!(parse_float("nan").unwrap().is_nan());
+    }
+
+    #[test]
+    fn special_plus_nan() {
+        assert!(parse_float("+nan").unwrap().is_nan());
+    }
+
+    #[test]
+    fn special_minus_nan() {
+        assert!(parse_float("-nan").unwrap().is_nan());
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.6 – -0.0 and +0.0 (IEEE 754 representations)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn negative_zero() {
+        let f = parse_float("-0.0").unwrap();
+        assert_eq!(f, 0.0_f64);
+        assert!(f.is_sign_negative());
+    }
+
+    #[test]
+    fn positive_zero() {
+        let f = parse_float("+0.0").unwrap();
+        assert_eq!(f, 0.0_f64);
+        assert!(f.is_sign_positive());
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.2 – Rejection: decimal point with no digit on one side
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn reject_leading_decimal_point() {
+        // ".5" – no digit before the decimal point
+        assert!(parse_float(".5").is_err());
+    }
+
+    #[test]
+    fn reject_trailing_decimal_point() {
+        // "1." – no digit after the decimal point
+        assert!(parse_float("1.").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // 6.1 – Rejection: exponent with no digits
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn reject_exponent_no_digits() {
+        assert!(parse_float("1e").is_err());
+    }
+
+    #[test]
+    fn reject_exponent_sign_no_digits() {
+        assert!(parse_float("1e+").is_err());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Task 8.4 – Unit tests for boolean parsing
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod boolean_tests {
+    use crate::parse;
+    use crate::Value;
+
+    fn parse_bool(value_toml: &str) -> Result<bool, crate::ParseError> {
+        let input = format!("x = {}", value_toml);
+        let doc = parse(&input)?;
+        match doc {
+            Value::Table(mut map) => match map.shift_remove("x").unwrap() {
+                Value::Boolean(b) => Ok(b),
+                other => panic!("expected Boolean, got {:?}", other),
+            },
+            _ => panic!("expected Table"),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 7.1 – `true` parses to Value::Boolean(true)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn true_parses_to_boolean_true() {
+        assert_eq!(parse_bool("true").unwrap(), true);
+    }
+
+    // -----------------------------------------------------------------------
+    // 7.2 – `false` parses to Value::Boolean(false)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn false_parses_to_boolean_false() {
+        assert_eq!(parse_bool("false").unwrap(), false);
+    }
+
+    // -----------------------------------------------------------------------
+    // 7.3 – Case-sensitivity: mixed/upper-case variants are rejected
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn true_capitalized_rejected() {
+        assert!(parse_bool("True").is_err());
+    }
+
+    #[test]
+    fn true_all_caps_rejected() {
+        assert!(parse_bool("TRUE").is_err());
+    }
+
+    #[test]
+    fn false_capitalized_rejected() {
+        assert!(parse_bool("False").is_err());
+    }
+
+    #[test]
+    fn false_all_caps_rejected() {
+        assert!(parse_bool("FALSE").is_err());
+    }
+
+    #[test]
+    fn true_mixed_case_rejected() {
+        assert!(parse_bool("tRuE").is_err());
+    }
+}

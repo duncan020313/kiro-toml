@@ -81,17 +81,17 @@ Implement a pure-Rust TOML v1.0.0 parser library as a single crate with modules 
   - [x] 6.13 Expose `pub fn parse(input: &str) -> Result<Value, ParseError>` in `lib.rs`
     - _Requirements: 1.1_
 
-- [~] 7. Checkpoint — ensure the crate compiles and basic parse smoke tests pass
+- [x] 7. Checkpoint — ensure the crate compiles and basic parse smoke tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [~] 8. Write parser unit tests
-  - [~] 8.1 Write unit tests for all string types: basic, literal, multi-line basic, multi-line literal; include escape sequences, control-character rejection, line-ending backslash, quote-within-multiline edge cases
+  - [x] 8.1 Write unit tests for all string types: basic, literal, multi-line basic, multi-line literal; include escape sequences, control-character rejection, line-ending backslash, quote-within-multiline edge cases
     - _Requirements: 4.1–4.12_
-  - [~] 8.2 Write unit tests for integer parsing: decimal, hex, octal, binary, sign, leading zeros, underscores, overflow, invalid underscore placement
+  - [x] 8.2 Write unit tests for integer parsing: decimal, hex, octal, binary, sign, leading zeros, underscores, overflow, invalid underscore placement
     - _Requirements: 5.1–5.11_
-  - [~] 8.3 Write unit tests for float parsing: fractional, exponent, combined, underscores, special values, `-0.0`, `+0.0`
+  - [x] 8.3 Write unit tests for float parsing: fractional, exponent, combined, underscores, special values, `-0.0`, `+0.0`
     - _Requirements: 6.1–6.7_
-  - [~] 8.4 Write unit tests for boolean parsing: `true`, `false`, case-sensitivity rejection
+  - [-] 8.4 Write unit tests for boolean parsing: `true`, `false`, case-sensitivity rejection
     - _Requirements: 7.1–7.3_
   - [~] 8.5 Write unit tests for all four date/time types: valid formats, space-separator, fractional seconds, truncation, invalid field ranges
     - _Requirements: 8.1–8.6_
@@ -128,19 +128,19 @@ Implement a pure-Rust TOML v1.0.0 parser library as a single crate with modules 
 
 - [~] 12. Write property-based tests (`proptest`)
   - [~] 12.1 Implement `proptest` strategies: `arb_string`, `arb_integer`, `arb_float`, `arb_datetime`, `arb_table`, and `arb_value` (bounded depth)
-  - [ ]* 12.2 Write property test for Property 1: parse-print round trip
+  - [~] 12.2 Write property test for Property 1: parse-print round trip
     - **Property 1: Parse-Print Round Trip**
     - **Validates: Requirements 4.1, 4.5, 13.1, 13.2, 13.3, 14.4**
-  - [ ]* 12.3 Write property test for Property 2: whitespace invariance
+  - [~] 12.3 Write property test for Property 2: whitespace invariance
     - **Property 2: Whitespace Invariance**
     - **Validates: Requirements 1.4, 3.6, 10.3**
-  - [ ]* 12.4 Write property test for Property 3: LF/CRLF equivalence
+  - [~] 12.4 Write property test for Property 3: LF/CRLF equivalence
     - **Property 3: LF/CRLF Equivalence**
     - **Validates: Requirements 1.5**
-  - [ ]* 12.5 Write property test for Property 4: comments are transparent
+  - [~] 12.5 Write property test for Property 4: comments are transparent
     - **Property 4: Comments Are Transparent**
     - **Validates: Requirements 2.1**
-  - [ ]* 12.6 Write property test for Property 5: duplicate definition rejection
+  - [~] 12.6 Write property test for Property 5: duplicate definition rejection
     - **Property 5: Duplicate Definition Rejection**
     - **Validates: Requirements 3.7, 3.9, 10.4, 10.5**
   - [ ]* 12.7 Write property test for Property 6: invalid escape rejection
