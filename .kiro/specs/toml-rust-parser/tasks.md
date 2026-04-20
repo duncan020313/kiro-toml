@@ -54,31 +54,31 @@ Implement a pure-Rust TOML v1.0.0 parser library as a single crate with modules 
 - [x] 5. Checkpoint — ensure the crate compiles and lexer unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 6. Implement the parser — core infrastructure (`parser.rs`)
-  - [-] 6.1 Define `TrackedValue`, `CurrentTableKind`, and `TableTracker` structs/enums as described in the design
-  - [-] 6.2 Implement `TableTracker` key-insertion logic: single-segment insert with duplicate detection, multi-segment dotted-key walk with implicit-table creation
+- [x] 6. Implement the parser — core infrastructure (`parser.rs`)
+  - [x] 6.1 Define `TrackedValue`, `CurrentTableKind`, and `TableTracker` structs/enums as described in the design
+  - [x] 6.2 Implement `TableTracker` key-insertion logic: single-segment insert with duplicate detection, multi-segment dotted-key walk with implicit-table creation
     - _Requirements: 3.5, 3.7, 3.8_
-  - [-] 6.3 Implement `TableTracker` standard-table header processing: path walk, implicit-table promotion, duplicate-header rejection, inline-table extension rejection
+  - [x] 6.3 Implement `TableTracker` standard-table header processing: path walk, implicit-table promotion, duplicate-header rejection, inline-table extension rejection
     - _Requirements: 10.1, 10.4, 10.5, 10.6, 10.7, 11.5_
-  - [-] 6.4 Implement `TableTracker` array-of-tables header processing: path walk, append semantics, static-array conflict rejection, standard-table conflict rejection
+  - [x] 6.4 Implement `TableTracker` array-of-tables header processing: path walk, append semantics, static-array conflict rejection, standard-table conflict rejection
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
-  - [-] 6.5 Implement `Parser::new` and the top-level `parse_document` loop (skip newlines, dispatch on `Eof` / `LBracket` / `DoubleLBracket` / keyval)
+  - [x] 6.5 Implement `Parser::new` and the top-level `parse_document` loop (skip newlines, dispatch on `Eof` / `LBracket` / `DoubleLBracket` / keyval)
     - _Requirements: 10.8_
-  - [-] 6.6 Implement `parse_key` (bare and quoted simple keys, dotted key accumulation, whitespace around `.`)
+  - [x] 6.6 Implement `parse_key` (bare and quoted simple keys, dotted key accumulation, whitespace around `.`)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 3.9, 3.10_
-  - [-] 6.7 Implement `parse_value` dispatch table (all token → `Value` variant mappings)
+  - [x] 6.7 Implement `parse_value` dispatch table (all token → `Value` variant mappings)
     - _Requirements: 13.1_
-  - [-] 6.8 Implement `parse_array`: collect elements, allow trailing comma, allow newlines/comments between elements
+  - [x] 6.8 Implement `parse_array`: collect elements, allow trailing comma, allow newlines/comments between elements
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
-  - [-] 6.9 Implement `parse_inline_table`: collect key/value pairs, reject trailing comma, reject newlines, mark result as closed/immutable
+  - [x] 6.9 Implement `parse_inline_table`: collect key/value pairs, reject trailing comma, reject newlines, mark result as closed/immutable
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6_
-  - [-] 6.10 Implement `parse_table_header` and `parse_aot_header` (consume brackets, parse key, delegate to `TableTracker`)
+  - [x] 6.10 Implement `parse_table_header` and `parse_aot_header` (consume brackets, parse key, delegate to `TableTracker`)
     - _Requirements: 10.1, 10.2, 10.3, 12.1_
-  - [-] 6.11 Implement `parse_keyval` (parse key, consume `=`, parse value, require newline or EOF after value)
+  - [x] 6.11 Implement `parse_keyval` (parse key, consume `=`, parse value, require newline or EOF after value)
     - _Requirements: 1.6_
-  - [-] 6.12 Wire `Parser::parse` to call `parse_document` and convert the `TableTracker` root into a `Value::Table`
+  - [x] 6.12 Wire `Parser::parse` to call `parse_document` and convert the `TableTracker` root into a `Value::Table`
     - _Requirements: 13.2_
-  - [ ] 6.13 Expose `pub fn parse(input: &str) -> Result<Value, ParseError>` in `lib.rs`
+  - [x] 6.13 Expose `pub fn parse(input: &str) -> Result<Value, ParseError>` in `lib.rs`
     - _Requirements: 1.1_
 
 - [~] 7. Checkpoint — ensure the crate compiles and basic parse smoke tests pass
