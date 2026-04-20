@@ -1,0 +1,14 @@
+[package]
+name = "toml-rust-parser"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "toml_rust_parser"
+path = "src/lib.rs"
+
+[dependencies]
+indexmap = "2"
+
+[dev-dependencies]
+proptest = "1"
