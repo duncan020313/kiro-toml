@@ -36,10 +36,14 @@ pub struct Lexer<'a> {
     line: u32,
     col: u32,
     peek_buf: Option<Token<'a>>,
+    /// When true, digit sequences followed by '.' are NOT treated as floats.
+    /// This allows digit-only dotted keys like `3.14159` to be parsed as
+    /// nested bare-key segments rather than a float literal.
+    pub key_mode: bool,
 }
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        Lexer { input, pos: 0, line: 1, col: 1, peek_buf: None }
+        Lexer { input, pos: 0, line: 1, col: 1, peek_buf: None, key_mode: false }
     }
 
     fn err(&self, msg: impl Into<String>) -> ParseError {
@@ -87,6 +91,13 @@ impl<'a> Lexer<'a> {
             self.peek_buf = Some(tok);
         }
         Ok(self.peek_buf.as_ref().unwrap())
+    }
+
+    /// Push a token back so it will be returned by the next `next_token` call.
+    /// Panics if the peek buffer is already occupied.
+    pub fn push_back(&mut self, tok: Token<'a>) {
+        assert!(self.peek_buf.is_none(), "push_back: peek buffer already occupied");
+        self.peek_buf = Some(tok);
     }
 
     fn lex_token(&mut self) -> Result<Token<'a>, ParseError> {
@@ -648,8 +659,10 @@ impl<'a> Lexer<'a> {
             return Err(self.err_at("expected digit", line, col));
         }
 
-        // Check for float indicators
-        let is_float = matches!(self.current_char(), Some('.') | Some('e') | Some('E'));
+        // Check for float indicators.
+        // In key_mode, a '.' after digits is a dotted-key separator, not a decimal point.
+        let is_float = !self.key_mode
+            && matches!(self.current_char(), Some('.') | Some('e') | Some('E'));
 
         if is_float {
             return self.lex_float_continuation(int_start, sign_neg, has_leading_zero, line, col);
@@ -800,9 +813,33 @@ impl<'a> Lexer<'a> {
 
         let date = LocalDate { year, month, day };
 
-        // Check for time separator: T, t, or space
+        // Check for time separator: T, t, or space (space only if followed by a digit)
+        let is_space_separator = self.current_char() == Some(' ')
+            && matches!(self.peek_char_at(1), Some('0'..='9'));
         match self.current_char() {
-            Some('T') | Some('t') | Some(' ') => {
+            Some('T') | Some('t') => {
+                self.advance();
+                let time = self.lex_time(line, col)?;
+                // Check for offset
+                match self.current_char() {
+                    Some('Z') | Some('z') => {
+                        self.advance();
+                        return Ok(Token::OffsetDateTimeToken(OffsetDateTime {
+                            date, time, offset: UtcOffset::Z,
+                        }));
+                    }
+                    Some('+') | Some('-') => {
+                        let offset = self.lex_offset(line, col)?;
+                        return Ok(Token::OffsetDateTimeToken(OffsetDateTime {
+                            date, time, offset,
+                        }));
+                    }
+                    _ => {
+                        return Ok(Token::LocalDateTimeToken(LocalDateTime { date, time }));
+                    }
+                }
+            }
+            Some(' ') if is_space_separator => {
                 self.advance();
                 let time = self.lex_time(line, col)?;
                 // Check for offset

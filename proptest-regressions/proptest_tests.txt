@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 1f068beccdc18ddf75943b51dda5c4df4a6dda1753d4616aa18b105a552495af # shrinks to value = Table({"eZ_v9VV---_": Boolean(false), "E16-": Table({"DFFv_Jq_xvvJ7KC": String("i2{\tO\u{f270}\u{f4b5}¥Z㷮醙}.\t낾s__\t\u{feff}v驰"), "Ox5lj": Array([Integer(9223372036854775807)])}), "p_p": Array([Table({"G_GpX": Float(-2.6708745192927693e-197), "J-kI4-7": LocalTime(LocalTime { hour: 16, minute: 13, second: 33, nanosecond: 638413443 }), "BRM_L09Cbel5gwpv": Float(-0.0)}), Table({"N---_KyS-9---H": LocalDateTime(LocalDateTime { date: LocalDate { year: 7020, month: 11, day: 19 }, time: LocalTime { hour: 3, minute: 49, second: 22, nanosecond: 321878339 } }), "oa-z": String("h"), "J_n5I_--q": String("\t\u{e0b1}'h?厛5?SjI\t^gꮒ3"), "Q_C-LAg_--X9": Float(0.0)})])})
+cc c593ba87ecd114d83b123bfa86c231aba0333dc50583f8ad4c715c63eda7827b # shrinks to value = Table({"a": LocalDate(LocalDate { year: 1, month: 1, day: 1 })}), comment_text = "!"
+cc 5073a5b99806993c5bd5afc81ef86169a2385250f37a1ef16aea1425d8eb4b15 # shrinks to value = Table({"a": Array([LocalDate(LocalDate { year: 1, month: 1, day: 1 })])})

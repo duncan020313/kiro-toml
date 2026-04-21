@@ -84,63 +84,63 @@ Implement a pure-Rust TOML v1.0.0 parser library as a single crate with modules 
 - [x] 7. Checkpoint — ensure the crate compiles and basic parse smoke tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 8. Write parser unit tests
+- [x] 8. Write parser unit tests
   - [x] 8.1 Write unit tests for all string types: basic, literal, multi-line basic, multi-line literal; include escape sequences, control-character rejection, line-ending backslash, quote-within-multiline edge cases
     - _Requirements: 4.1–4.12_
   - [x] 8.2 Write unit tests for integer parsing: decimal, hex, octal, binary, sign, leading zeros, underscores, overflow, invalid underscore placement
     - _Requirements: 5.1–5.11_
   - [x] 8.3 Write unit tests for float parsing: fractional, exponent, combined, underscores, special values, `-0.0`, `+0.0`
     - _Requirements: 6.1–6.7_
-  - [-] 8.4 Write unit tests for boolean parsing: `true`, `false`, case-sensitivity rejection
+  - [x] 8.4 Write unit tests for boolean parsing: `true`, `false`, case-sensitivity rejection
     - _Requirements: 7.1–7.3_
-  - [~] 8.5 Write unit tests for all four date/time types: valid formats, space-separator, fractional seconds, truncation, invalid field ranges
+  - [x] 8.5 Write unit tests for all four date/time types: valid formats, space-separator, fractional seconds, truncation, invalid field ranges
     - _Requirements: 8.1–8.6_
-  - [~] 8.6 Write unit tests for arrays: empty, mixed types, trailing comma, nested arrays, multi-line with comments
+  - [x] 8.6 Write unit tests for arrays: empty, mixed types, trailing comma, nested arrays, multi-line with comments
     - _Requirements: 9.1–9.5_
-  - [~] 8.7 Write unit tests for standard tables: basic header, dotted header, whitespace in header, super-table after sub-table, duplicate header rejection, implicit-table promotion
+  - [x] 8.7 Write unit tests for standard tables: basic header, dotted header, whitespace in header, super-table after sub-table, duplicate header rejection, implicit-table promotion
     - _Requirements: 10.1–10.9_
-  - [~] 8.8 Write unit tests for inline tables: valid, trailing-comma rejection, newline rejection, duplicate key rejection, extension rejection
+  - [x] 8.8 Write unit tests for inline tables: valid, trailing-comma rejection, newline rejection, duplicate key rejection, extension rejection
     - _Requirements: 11.1–11.6_
-  - [~] 8.9 Write unit tests for array of tables: basic append, nested AOT, static-array conflict, standard-table conflict, sub-table under AOT element
+  - [x] 8.9 Write unit tests for array of tables: basic append, nested AOT, static-array conflict, standard-table conflict, sub-table under AOT element
     - _Requirements: 12.1–12.8_
-  - [~] 8.10 Write unit tests for key rules: bare keys, quoted keys, empty quoted key, dotted keys, whitespace around dot, key/quoted-key equivalence, digit-only dotted key
+  - [x] 8.10 Write unit tests for key rules: bare keys, quoted keys, empty quoted key, dotted keys, whitespace around dot, key/quoted-key equivalence, digit-only dotted key
     - _Requirements: 3.1–3.10_
-  - [~] 8.11 Write unit tests for error reporting: verify `ParseError` carries correct `line` and `col` for representative error cases
+  - [x] 8.11 Write unit tests for error reporting: verify `ParseError` carries correct `line` and `col` for representative error cases
     - _Requirements: 15.1–15.5_
 
-- [~] 9. Checkpoint — ensure all parser unit tests pass
+- [x] 9. Checkpoint — ensure all parser unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 10. Implement the pretty printer (`printer.rs`)
-  - [~] 10.1 Implement `PrettyPrinter::new` and the `print_value_inline` method for all scalar types and inline arrays/tables
+- [x] 10. Implement the pretty printer (`printer.rs`)
+  - [x] 10.1 Implement `PrettyPrinter::new` and the `print_value_inline` method for all scalar types and inline arrays/tables
     - _Requirements: 14.1_
-  - [~] 10.2 Implement key formatting: bare key when `[A-Za-z0-9_-]` only, otherwise basic-string quoted
+  - [x] 10.2 Implement key formatting: bare key when `[A-Za-z0-9_-]` only, otherwise basic-string quoted
     - _Requirements: 14.1_
-  - [~] 10.3 Implement `print_table` two-pass strategy: Phase 1 emits scalars and inline-eligible values; Phase 2 emits sub-table headers recursively; Phase 3 emits array-of-tables headers recursively
+  - [x] 10.3 Implement `print_table` two-pass strategy: Phase 1 emits scalars and inline-eligible values; Phase 2 emits sub-table headers recursively; Phase 3 emits array-of-tables headers recursively
     - _Requirements: 14.2, 14.3_
-  - [~] 10.4 Implement `PrettyPrinter::print` (entry point) and expose `pub fn to_toml_string(value: &Value) -> String` in `lib.rs`
+  - [x] 10.4 Implement `PrettyPrinter::print` (entry point) and expose `pub fn to_toml_string(value: &Value) -> String` in `lib.rs`
     - _Requirements: 14.1, 14.4_
   - [ ]* 10.5 Write unit tests for the pretty printer: scalars, nested tables, arrays of tables, inline tables inside arrays, special float values, date/time formatting
     - _Requirements: 14.1–14.4_
 
-- [~] 11. Checkpoint — ensure pretty printer unit tests pass
+- [x] 11. Checkpoint — ensure pretty printer unit tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 12. Write property-based tests (`proptest`)
-  - [~] 12.1 Implement `proptest` strategies: `arb_string`, `arb_integer`, `arb_float`, `arb_datetime`, `arb_table`, and `arb_value` (bounded depth)
-  - [~] 12.2 Write property test for Property 1: parse-print round trip
+- [x] 12. Write property-based tests (`proptest`)
+  - [x] 12.1 Implement `proptest` strategies: `arb_string`, `arb_integer`, `arb_float`, `arb_datetime`, `arb_table`, and `arb_value` (bounded depth)
+  - [x] 12.2 Write property test for Property 1: parse-print round trip
     - **Property 1: Parse-Print Round Trip**
     - **Validates: Requirements 4.1, 4.5, 13.1, 13.2, 13.3, 14.4**
-  - [~] 12.3 Write property test for Property 2: whitespace invariance
+  - [x] 12.3 Write property test for Property 2: whitespace invariance
     - **Property 2: Whitespace Invariance**
     - **Validates: Requirements 1.4, 3.6, 10.3**
-  - [~] 12.4 Write property test for Property 3: LF/CRLF equivalence
+  - [x] 12.4 Write property test for Property 3: LF/CRLF equivalence
     - **Property 3: LF/CRLF Equivalence**
     - **Validates: Requirements 1.5**
-  - [~] 12.5 Write property test for Property 4: comments are transparent
+  - [x] 12.5 Write property test for Property 4: comments are transparent
     - **Property 4: Comments Are Transparent**
     - **Validates: Requirements 2.1**
-  - [~] 12.6 Write property test for Property 5: duplicate definition rejection
+  - [x] 12.6 Write property test for Property 5: duplicate definition rejection
     - **Property 5: Duplicate Definition Rejection**
     - **Validates: Requirements 3.7, 3.9, 10.4, 10.5**
   - [ ]* 12.7 Write property test for Property 6: invalid escape rejection
@@ -165,13 +165,13 @@ Implement a pure-Rust TOML v1.0.0 parser library as a single crate with modules 
     - **Property 12: Fractional Second Truncation**
     - **Validates: Requirements 8.6**
 
-- [~] 13. Write integration tests (`tests/`)
-  - [~] 13.1 Create `tests/integration.rs`; add valid TOML round-trip integration tests covering all major constructs (strings, numbers, booleans, dates, arrays, tables, AOT, inline tables, dotted keys)
+- [x] 13. Write integration tests (`tests/`)
+  - [x] 13.1 Create `tests/integration.rs`; add valid TOML round-trip integration tests covering all major constructs (strings, numbers, booleans, dates, arrays, tables, AOT, inline tables, dotted keys)
     - _Requirements: 1.1, 13.1, 13.2, 13.3, 14.4_
   - [ ]* 13.2 Add integration tests for invalid TOML inputs asserting `parse` returns `Err` with a non-empty message for each error category in the design (encoding, duplicate key, invalid escape, overflow, invalid date, structural violation, trailing content)
     - _Requirements: 15.1, 15.2, 15.3_
 
-- [~] 14. Final checkpoint — ensure all tests pass
+- [x] 14. Final checkpoint — ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

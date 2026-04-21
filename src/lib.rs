@@ -4,6 +4,9 @@ pub mod parser;
 pub mod printer;
 pub mod value;
 
+#[cfg(test)]
+mod proptest_tests;
+
 pub use error::ParseError;
 pub use value::Value;
 
